@@ -34,7 +34,7 @@ def read_kline_csv(dl_file):
     try:
 
         df = pd.read_csv(
-            dl_file, names=_kline_cols, index_col=None)
+            dl_file, names=_kline_cols, index_col=None, header=0)
         for col in ["Open_time", "Close_time"]:
             df[col] = pd.to_datetime(
                 df[col+"_ms"], unit="ms")
@@ -108,7 +108,7 @@ def download_monthly_klines(trading_type, symbols, num_symbols, intervals,  star
                                 symbol.upper(), interval, year, '{:02d}'.format(month))
                             download_file(
                                 checksum_path, checksum_file_name, date_range, folder)
-                    except:
+                    except (ValueError, FileNotFoundError):
                         pass
     print("finsished monthly")
 #    return interval_frames
@@ -133,13 +133,14 @@ def download_daily_klines(trading_type, symbols, num_symbols, intervals, year, m
                     d=date(year, month, day)
                     path = get_path(trading_type, "klines",
                                     "daily", symbol, interval)
+                    # print(path)
                     file_name = "{}-{}-{}.zip".format(
                         symbol.upper(), interval, d)
                     dl_file = download_file(
                         path, file_name, date_range, folder)
                     df = add_interval_symbol_type(read_kline_csv(dl_file),interval,symbol,trading_type)
-#                    print(f"\ndf\n{df}")
-#                    interval_frames.append(df)
+                    # print(f"\ndf\n{df}")
+                    # interval_frames.append(df)
                     yield df
                     if checksum == 1:
                         checksum_path = get_path(
@@ -148,7 +149,7 @@ def download_daily_klines(trading_type, symbols, num_symbols, intervals, year, m
                             symbol.upper(), interval, date)
                         download_file(
                             checksum_path, checksum_file_name, date_range, folder)
-                except:
+                except (ValueError, FileNotFoundError):
                     pass
         print("finished daily")            
         current += 1
@@ -185,11 +186,10 @@ def main():
     monthly_frames = download_monthly_klines(args.type, symbols, num_symbols, \
          args.intervals, args.start_year, END_YEAR,args.folder, args.checksum)
 
-#    print(f"\nMonthly frames {monthly_frames}")
+    # print(f"\nMonthly frames {list(monthly_frames)}")
 
 
     df_all = pd.concat(chain(monthly_frames,daily_frames),ignore_index=True).reindex(columns=_ordered_cols).set_index(["Symbol","Interval","Open_time"]).sort_index()
-
 
     print(f"\ngot the frame \n{df_all}")
 
